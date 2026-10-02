@@ -8,7 +8,7 @@ export const DEFAULT_CATEGORIES = [
     name: "Ovoce",
     keywords: ["jablko", "jablka", "hruška", "banán", "pomeranč", "mandarinka", "citron",
       "limetka", "hrozny", "hroznové víno", "jahody", "borůvky", "maliny", "ostružiny",
-      "meloun", "kiwi", "ananas", "mango", "avokádo", "broskev", "nektarinka", "meruňka",
+      "meloun", "kiwi", "ananas", "mango", "broskev", "nektarinka", "meruňka",
       "švestky", "třešně", "višně", "grep", "granátové", "fíky", "datle", "ovoce"],
   },
   {
@@ -18,7 +18,7 @@ export const DEFAULT_CATEGORIES = [
       "rajčata", "okurka", "paprika", "salát", "ledový", "rukola", "špenát", "brokolice",
       "květák", "zelí", "kedluben", "cuketa", "lilek", "dýně", "houby", "žampiony", "pórek",
       "ředkvičky", "kukuřice", "bylinky", "pažitka", "kopr", "bazalka", "zázvor", "řepa",
-      "batáty", "jarní cibulka", "polníček", "chřest", "zelenina"],
+      "batáty", "avokádo", "jarní cibulka", "kapusta", "klíčky", "koriandr", "polníček", "chřest", "zelenina"],
   },
   {
     id: "mlecne",
@@ -26,7 +26,7 @@ export const DEFAULT_CATEGORIES = [
     keywords: ["mléko", "máslo", "jogurt", "sýr", "tvaroh", "smetana", "šlehačka", "kefír",
       "podmáslí", "vejce", "vajíčka", "vajec", "eidam", "gouda", "mozzarella", "parmazán",
       "hermelín", "niva", "cottage", "lučina", "pomazánka", "skyr", "zakysaná", "mascarpone",
-      "ricotta", "jogurty", "termix", "pribináček", "lipánek", "žervé", "rama", "margarín"],
+      "ricotta", "feta", "jogurty", "^protein", "termix", "pribináček", "lipánek", "žervé", "rama", "margarín"],
   },
   {
     id: "pecivo",
@@ -41,13 +41,13 @@ export const DEFAULT_CATEGORIES = [
     keywords: ["maso", "kuře", "kuřecí", "prsa", "stehna", "vepřové", "hovězí", "mleté",
       "krůtí", "šunka", "salám", "párky", "klobása", "slanina", "špekáčky", "sekaná",
       "játra", "ryba", "losos", "tuňák", "krevety", "filé", "kotleta", "plec", "krkovice",
-      "uzené", "debrecínka", "vlašák", "pršut", "kabanos", "jitrnice", "tlačenka"],
+      "uzené", "debrecínka", "vlašák", "pršut", "kabanos", "jitrnice", "tlačenka", "mortadela"],
   },
   {
     id: "mrazene",
     name: "Mražené",
-    keywords: ["mražené", "mražená", "zmrzlina", "nanuk", "pizza", "hranolky", "led",
-      "mražený", "mražená zelenina", "mražené ovoce", "mražená pizza", "rybí prsty", "knedlíky", "pelmeně", "nugety"],
+    keywords: ["^mražené", "^mražená", "^mražený", "zmrzlina", "nanuk", "pizza", "hranolky", "led",
+      "mražená zelenina", "mražené ovoce", "mražená pizza", "rybí prsty", "knedlíky", "pelmeně", "nugety"],
   },
   {
     id: "trvanlive",
@@ -56,15 +56,15 @@ export const DEFAULT_CATEGORIES = [
       "ocet", "kečup", "hořčice", "majonéza", "konzerva", "fazole", "čočka", "hrách",
       "kuskus", "ovesné", "vločky", "müsli", "cornflakes", "med", "marmeláda", "džem",
       "nutella", "čokoláda", "sušenky", "oplatky", "chipsy", "brambůrky", "ořechy",
-      "mandle", "rozinky", "kakao", "káva", "čaj", "kypřící", "prášek do pečiva", "droždí",
+      "mandle", "rozinky", "kakao", "kypřící", "prášek do pečiva", "droždí",
       "koření", "paprika mletá", "bujón", "polévka", "omáčka", "protlak", "passata",
       "tuňák v konzervě", "sardinky", "pudink", "škrob", "strouhanka", "krupice",
-      "kroupy", "olivy", "kukuřice v plechovce", "bonbony", "tyčinky", "popcorn", "sirup"],
+      "kroupy", "olivy", "tofu", "cizrna", "gnocchi", "ravioli", "krekry", "sugo", "balsamico", "arašídy", "skořice", "kmín", "oregano", "vanilka", "soda", "kukuřice v plechovce", "bonbony", "tyčinky", "popcorn", "sirup"],
   },
   {
     id: "drogerie",
     name: "Drogerie",
-    keywords: ["toaletní papír", "papír", "kapesníky", "ubrousky", "utěrky", "mýdlo",
+    keywords: ["toaletní papír", "papír", "kapesníky", "ubrousky", "utěrky", "filtry", "dezinfekce", "mýdlo",
       "šampon", "kondicionér", "sprchový", "gel", "zubní pasta", "pasta", "kartáček",
       "deodorant", "prací", "prášek", "aviváž", "jar", "saponát", "čistič", "savo",
       "houbičky", "pytle", "sáčky", "alobal", "fólie", "pečicí", "plenky", "vlhčené",
@@ -76,7 +76,7 @@ export const DEFAULT_CATEGORIES = [
     name: "Nápoje",
     keywords: ["voda", "minerálka", "sodovka", "džus", "šťáva", "limonáda", "kola",
       "pivo", "víno", "prosecco", "rum", "vodka", "slivovice", "tonic", "sirup",
-      "mattoni", "ice tea", "energy", "nápoj", "nealko"],
+      "mattoni", "ice tea", "mošt", "káva", "kafe", "čaj", "bitter", "corona", "zrnková", "instantní", "energy", "nápoj", "nealko"],
   },
   {
     id: "ostatni",
@@ -86,3 +86,14 @@ export const DEFAULT_CATEGORIES = [
 ];
 
 export const FALLBACK_CATEGORY = "ostatni";
+
+// Klíčová slova pro třídění: uložené (upravitelné) + výchozí ze slovníku + inspirační
+// seznam. Výchozí se přimíchávají vždy, aby se vylepšení slovníku projevila
+// i u seznamu, který už má kategorie uložené.
+export function withDefaultKeywords(categories, staples = {}) {
+  return categories.map((c) => {
+    const def = DEFAULT_CATEGORIES.find((d) => d.id === c.id);
+    const all = [...c.keywords, ...(def?.keywords ?? []), ...(staples[c.id] ?? [])];
+    return { ...c, keywords: [...new Set(all)] };
+  });
+}

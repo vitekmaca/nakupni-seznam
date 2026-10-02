@@ -45,7 +45,7 @@ const NOUN_EXCEPTIONS = new Set(["zeli", "koreni", "piti", "kafe", "pyre", "smaz
 function isAdjective(word) {
   const w = word.toLowerCase();
   if (NOUN_EXCEPTIONS.has(normalize(w))) return false;
-  return /(í|ý|á|é|ého|ých|ích|ími|ým)$/.test(w) && w.length > 2;
+  return /(í|ý|á|é|ou|ého|ých|ích|ími|ým)$/.test(w) && w.length > 2;
 }
 
 function isQuantity(n) {
@@ -115,7 +115,9 @@ export function categorize(name, categories, learned) {
   let bestScore = 0;
   for (const cat of categories) {
     for (const kwRaw of cat.keywords) {
-      const kw = normalize(kwRaw);
+      // „^slovo“ = silné heslo, které přebije ostatní („^mražený“ špenát → Mražené).
+      const strong = kwRaw.startsWith("^");
+      const kw = normalize(strong ? kwRaw.slice(1) : kwRaw);
       if (!kw) continue;
       let score = 0;
       if (kw.includes(" ")) {
@@ -124,10 +126,12 @@ export function categorize(name, categories, learned) {
       } else {
         for (const w of words) {
           const p = commonPrefix(w, kw);
-          const need = Math.max(3, Math.min(w.length, kw.length) - 2);
+          // Shoda začátku: koncovky se smí lišit (rohlík ~ rohlíky), ale „slané“ ≠ „slanina“.
+          const need = Math.max(3, Math.min(w.length, kw.length) - 2, kw.length - 2);
           if (p >= need) score = Math.max(score, p + (p === w.length && p === kw.length ? 5 : 0));
         }
       }
+      if (score && strong) score += 50;
       if (score > bestScore) {
         bestScore = score;
         best = cat.id;

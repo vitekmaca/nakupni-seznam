@@ -1,4 +1,5 @@
-import { DEFAULT_CATEGORIES, FALLBACK_CATEGORY } from "./categories.js";
+import { DEFAULT_CATEGORIES, FALLBACK_CATEGORY, withDefaultKeywords } from "./categories.js";
+import { STAPLES } from "./staples.js";
 import { splitItems, splitDictation, itemKey, categorize, normalize } from "./parse.js";
 import { createStore } from "./store.js";
 
@@ -9,6 +10,7 @@ const DEFAULT_META = {
   categories: DEFAULT_CATEGORIES,
   learned: {},
   phrases: [], // víceslovné položky, které se při diktování nemají rozdělit
+  history: {}, // { [key]: {name, cat, count, lastAdded, lastBought} } – pro návrhy
   autoDeleteHours: 12,
 };
 
@@ -37,12 +39,15 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
-// Seznam se dá sdílet odkazem: …/#l=<id>. Kdo má odkaz, vidí a upravuje stejný seznam.
+// Parametry v adrese:
+//   #l=<id>          sdílený seznam (kdo má odkaz, vidí a upravuje stejný seznam)
+//   #pridat=a,b,c    přidá položky (např. odkaz poslaný z jiné aplikace)
+const hashParams = new URLSearchParams(location.hash.slice(1));
+if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+
 function resolveListId() {
-  const fromHash = new URLSearchParams(location.hash.slice(1)).get("l");
-  const id = fromHash || pref("listId") || randomListId();
+  const id = hashParams.get("l") || pref("listId") || randomListId();
   pref("listId", id);
-  if (fromHash) history.replaceState(null, "", location.pathname + location.search);
   return id;
 }
 
@@ -53,6 +58,8 @@ const store = await createStore(listId, DEFAULT_META);
 let hideBought = pref("hideBought") ?? false;
 
 const categories = () => store.meta.categories?.length ? store.meta.categories : DEFAULT_CATEGORIES;
+// Kategorie s kompletním slovníkem pro třídění (uložené + výchozí + inspirační seznam).
+const matchCategories = () => withDefaultKeywords(categories(), STAPLES);
 
 function categoryOf(item) {
   const cats = categories();
@@ -127,6 +134,23 @@ $("#toast-undo").addEventListener("click", () => {
   toastUndo = null;
 });
 
+// Historie nákupů – z ní se berou „💡 Návrhy“ (co kupujeme často, co bylo minule).
+function recordHistory(items, field) {
+  const history = { ...(store.meta.history || {}) };
+  const now = Date.now();
+  for (const it of items) {
+    const prev = history[it.key] || { count: 0 };
+    history[it.key] = {
+      ...prev,
+      name: it.name,
+      cat: it.cat,
+      ...(field === "lastAdded" ? { count: (prev.count || 0) + 1 } : {}),
+      [field]: now,
+    };
+  }
+  if (items.length) store.patchMeta({ history });
+}
+
 function toggleBought(id) {
   const it = store.items[id];
   if (!it) return;
@@ -135,6 +159,7 @@ function toggleBought(id) {
     store.patchItem(id, { bought: false, boughtAt: null });
   } else {
     store.patchItem(id, { bought: true, boughtAt: Date.now() });
+    recordHistory([it], "lastBought");
     toast(`✓ ${it.name}`, () => {
       flashIds.add(id);
       store.patchItem(id, { bought: false, boughtAt: null });
@@ -206,6 +231,7 @@ function addItems(names) {
   const existing = new Map(Object.values(store.items).map((i) => [i.key, i]));
   const now = Date.now();
   const fresh = [];
+  const touched = [];
   let revived = 0;
   for (const name of names) {
     const key = itemKey(name);
@@ -216,6 +242,7 @@ function addItems(names) {
       if (dup.bought) {
         store.patchItem(dup.id, { bought: false, boughtAt: null, name });
         flashIds.add(dup.id);
+        touched.push({ ...dup, name });
         revived++;
       }
       continue;
@@ -224,7 +251,7 @@ function addItems(names) {
       id: uid(),
       name,
       key,
-      cat: categorize(name, categories(), store.meta.learned || {}) || FALLBACK_CATEGORY,
+      cat: categorize(name, matchCategories(), store.meta.learned || {}) || FALLBACK_CATEGORY,
       bought: false,
       boughtAt: null,
       addedAt: now + fresh.length,
@@ -234,6 +261,7 @@ function addItems(names) {
     flashIds.add(item.id);
   }
   if (fresh.length) store.putItems(fresh);
+  recordHistory([...fresh, ...touched], "lastAdded");
   const parts = [];
   if (fresh.length) parts.push(`Přidáno ${fresh.length}`);
   if (revived) parts.push(`vráceno ${revived}`);
@@ -258,7 +286,7 @@ function setRecording(on) {
 // Víceslovné výrazy, které se mají držet pohromadě: ze slovníku, naučené kategorie
 // i položky, které uživatel v náhledu spojil na jeden řádek.
 function knownPhrases() {
-  const fromCats = categories().flatMap((c) => c.keywords.map(normalize));
+  const fromCats = matchCategories().flatMap((c) => c.keywords.map((k) => normalize(k)));
   const fromLearned = Object.keys(store.meta.learned || {});
   return [...fromCats, ...fromLearned, ...(store.meta.phrases || [])].filter((p) => p.includes(" "));
 }
@@ -347,7 +375,7 @@ function updatePreview() {
   const learned = store.meta.learned || {};
   $("#add-preview").innerHTML = pendingNames()
     .map((n) => {
-      const cat = categorize(n, categories(), learned);
+      const cat = categorize(n, matchCategories(), learned);
       return `<li><span>${escapeHtml(n)}</span><span class="pc ${cat ? "" : "unknown"}">${escapeHtml(cat ? catName(cat) : "Ostatní ?")}</span></li>`;
     })
     .join("");
@@ -426,7 +454,9 @@ $("#item-save").addEventListener("click", () => {
     store.patchItem(it.id, { name, key, cat: editingCat });
     if (editingCat !== categoryOf(it) || key !== it.key) {
       // Zapamatuj si kategorii pro příště.
-      store.patchMeta({ learned: { ...(store.meta.learned || {}), [key]: editingCat } });
+      const history = { ...(store.meta.history || {}) };
+      if (history[key]) history[key] = { ...history[key], name, cat: editingCat };
+      store.patchMeta({ learned: { ...(store.meta.learned || {}), [key]: editingCat }, history });
     }
   }
   $("#dlg-item").close();
@@ -542,6 +572,98 @@ if (store.mode === "firebase") {
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
+
+// ---------- návrhy ----------
+
+const DAY = 24 * HOUR;
+
+function suggestionEntries() {
+  const learned = store.meta.learned || {};
+  const history = store.meta.history || {};
+  const entries = new Map();
+  let order = 0;
+  for (const [cat, names] of Object.entries(STAPLES)) {
+    for (const name of names) {
+      const key = itemKey(name);
+      entries.set(key, { key, name, cat: learned[key] || cat, count: 0, order: order++ });
+    }
+  }
+  for (const [key, h] of Object.entries(history)) {
+    if (!h || !h.name) continue;
+    const base = entries.get(key);
+    entries.set(key, {
+      key,
+      name: base?.name ?? h.name,
+      cat: learned[key] || h.cat || base?.cat || FALLBACK_CATEGORY,
+      count: h.count || 0,
+      lastBought: h.lastBought || 0,
+      order: base?.order ?? order++,
+    });
+  }
+  return [...entries.values()];
+}
+
+function renderSuggestions() {
+  const q = normalize($("#sug-search").value);
+  const onList = new Map(Object.values(store.items).filter((i) => !i.bought).map((i) => [i.key, i]));
+  let all = suggestionEntries();
+  if (q) all = all.filter((e) => normalize(e.name).includes(q));
+  const chip = (e) =>
+    `<button type="button" class="chip ${onList.has(e.key) ? "active" : ""}" data-key="${escapeHtml(e.key)}" data-name="${escapeHtml(e.name)}">${onList.has(e.key) ? "✓ " : ""}${escapeHtml(e.name)}</button>`;
+  const byFreq = (a, b) => b.count - a.count || a.order - b.order;
+
+  let html = "";
+  if (q && !all.some((e) => normalize(e.name) === q)) {
+    html += `<div class="chips sug-new"><button type="button" class="chip" data-name="${escapeHtml($("#sug-search").value.trim())}">+ Přidat „${escapeHtml($("#sug-search").value.trim())}“</button></div>`;
+  }
+  // Minulý nákup = co se koupilo během posledního dne nakupování.
+  const lastTrip = Math.max(0, ...all.map((e) => e.lastBought || 0));
+  if (lastTrip && !q) {
+    const last = all.filter((e) => e.lastBought && e.lastBought > lastTrip - DAY).sort(byFreq);
+    if (last.length) html += `<section class="sug"><h3>Minulý nákup</h3><div class="chips">${last.map(chip).join("")}</div></section>`;
+  }
+  for (const cat of categories()) {
+    const inCat = all.filter((e) => (categories().some((c) => c.id === e.cat) ? e.cat : FALLBACK_CATEGORY) === cat.id);
+    if (!inCat.length) continue;
+    html += `<section class="sug"><h3>${escapeHtml(cat.name)}</h3><div class="chips">${inCat.sort(byFreq).map(chip).join("")}</div></section>`;
+  }
+  $("#sug-list").innerHTML = html || `<p class="hint">Nic nenalezeno.</p>`;
+}
+
+$("#btn-suggest").addEventListener("click", () => {
+  $("#sug-search").value = "";
+  renderSuggestions();
+  $("#dlg-suggest").showModal();
+});
+store.onChange(() => $("#dlg-suggest").open && renderSuggestions());
+$("#sug-search").addEventListener("input", renderSuggestions);
+$("#sug-search").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const v = e.target.value.trim();
+  if (v) addItems(splitItems(v));
+  e.target.value = "";
+  renderSuggestions();
+});
+$("#sug-list").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-name]");
+  if (!btn) return;
+  const key = btn.dataset.key;
+  const item = key && Object.values(store.items).find((i) => i.key === key && !i.bought);
+  if (item) {
+    store.deleteItems([item.id]);
+    toast(`Odebráno: ${item.name}`, () => store.putItems([item]));
+  } else {
+    addItems([btn.dataset.name]);
+    if (!key) {
+      $("#sug-search").value = "";
+      renderSuggestions();
+    }
+  }
+});
+
+// Položky z adresy (#pridat=…)
+if (hashParams.get("pridat")) addItems(splitItems(hashParams.get("pridat")));
 
 render();
 

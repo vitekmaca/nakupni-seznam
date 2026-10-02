@@ -34,7 +34,7 @@
   <div class="bottom-bar">
     <button id="btn-type" class="round-btn small" title="Napsat ručně" aria-label="Napsat ručně">⌨️</button>
     <button id="btn-mic" class="round-btn mic" aria-label="Diktovat seznam">🎤</button>
-    <span class="round-btn small placeholder"></span>
+    <button id="btn-suggest" class="round-btn small" title="Návrhy z minulých nákupů" aria-label="Návrhy">💡</button>
   </div>
 
   <div id="toast" class="toast" hidden>
@@ -56,6 +56,22 @@
         <button value="cancel" class="text-btn">Zrušit</button>
         <button type="button" id="add-confirm" class="primary-btn">Přidat</button>
       </div>
+    </form>
+  </dialog>
+
+  <!-- Návrhy -->
+  <dialog id="dlg-suggest" class="sheet tall">
+    <form method="dialog">
+      <div class="sug-head">
+        <div class="row" style="margin-top:0">
+          <h2>💡 Co ještě?</h2>
+          <span class="spacer"></span>
+          <button value="close" class="primary-btn">Hotovo</button>
+        </div>
+        <input type="search" id="sug-search" placeholder="Hledat, nebo napsat novou věc…" autocomplete="off">
+        <p class="hint">Ťukni na věc a přidá se do seznamu. Zelené už na seznamu jsou, dalším ťuknutím je odebereš.</p>
+      </div>
+      <div id="sug-list"></div>
     </form>
   </dialog>
 
