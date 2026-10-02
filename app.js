@@ -1,5 +1,5 @@
 import { DEFAULT_CATEGORIES, FALLBACK_CATEGORY } from "./categories.js";
-import { splitItems, itemKey, categorize, normalize } from "./parse.js";
+import { splitItems, splitDictation, itemKey, categorize, normalize } from "./parse.js";
 import { createStore } from "./store.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -8,6 +8,7 @@ const HOUR = 3600 * 1000;
 const DEFAULT_META = {
   categories: DEFAULT_CATEGORIES,
   learned: {},
+  phrases: [], // víceslovné položky, které se při diktování nemají rozdělit
   autoDeleteHours: 12,
 };
 
@@ -254,8 +255,26 @@ function setRecording(on) {
   if (!on) $("#add-interim").textContent = "";
 }
 
+// Víceslovné výrazy, které se mají držet pohromadě: ze slovníku, naučené kategorie
+// i položky, které uživatel v náhledu spojil na jeden řádek.
+function knownPhrases() {
+  const fromCats = categories().flatMap((c) => c.keywords.map(normalize));
+  const fromLearned = Object.keys(store.meta.learned || {});
+  return [...fromCats, ...fromLearned, ...(store.meta.phrases || [])].filter((p) => p.includes(" "));
+}
+
+// Když uživatel nechal na řádku víc slov, která by diktování rozdělilo, zapamatuj si je.
+function learnPhrases(names) {
+  const known = new Set(knownPhrases());
+  const fresh = names
+    .filter((n) => splitDictation(n, [...known]).length > 1)
+    .map(itemKey)
+    .filter((k) => k.includes(" ") && !known.has(k));
+  if (fresh.length) store.patchMeta({ phrases: [...(store.meta.phrases || []), ...new Set(fresh)] });
+}
+
 function appendText(chunk) {
-  const lines = splitItems(chunk);
+  const lines = splitDictation(chunk, knownPhrases());
   if (!lines.length) return;
   const ta = $("#add-text");
   const cur = ta.value.replace(/\s+$/, "");
@@ -339,7 +358,7 @@ function openAddDialog({ dictate }) {
   $("#add-text").value = "";
   $("#add-interim").textContent = "";
   $("#add-hint").textContent = dictate
-    ? "Říkej položky a mezi nimi dělej krátkou pauzu nebo řekni „a“. Pak ťukni na 🎤 pro konec."
+    ? "Vyjmenuj, co koupit, klidně jedním dechem. Pak ťukni na 🎤 a zkontroluj řádky – co k sobě patří, spoj na jeden řádek."
     : "Napiš položky, každou na nový řádek (nebo odděl čárkou).";
   $("#add-title").textContent = dictate ? "Poslouchám…" : "Přidat položky";
   $("#add-mic").hidden = !SpeechRecognition;
@@ -355,6 +374,7 @@ $("#add-confirm").addEventListener("click", () => {
   stopRecognition();
   const names = pendingNames();
   $("#dlg-add").close();
+  learnPhrases(names);
   addItems(names);
 });
 
@@ -526,4 +546,4 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
 render();
 
 // pro ladění v konzoli
-window.__nakup = { store, normalize };
+window.__nakup = { store, normalize, appendText };

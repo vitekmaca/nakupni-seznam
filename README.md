@@ -4,7 +4,7 @@ Webová aplikace na nákupní seznam z diktování. Ťukneš na 🎤, vyjmenuje�
 
 ## Jak to funguje
 
-- **Diktování:** Web Speech API v češtině (Chrome / Safari). Mezi položkami udělej krátkou pauzu nebo řekni „a“, „pak“, „ještě“. Před přidáním se ukáže náhled, který jde opravit.
+- **Diktování:** Web Speech API v češtině (Chrome / Safari). Seznam stačí vyjmenovat jedním dechem („mléko chleba dvě másla kuřecí prsa prášek do pečiva“). Aplikace ho rozdělí po slovech a pohromadě nechá množství, přídavná jména a předložky („dvě másla“, „kuřecí prsa“, „prášek do pečiva“). Před přidáním se ukáže náhled. Co k sobě patří a rozdělilo se („sýr / eidam“), spoj na jeden řádek a aplikace si to zapamatuje.
 - **Třídění:** podle klíčových slov v `categories.js` (porovnává se bez diakritiky a podle začátku slova, takže „rohlík“ najde i „rohlíky“). Když položku přes ⋯ přesuneš do jiné kategorie, aplikace si to zapamatuje.
 - **Koupeno:** ťuknutím se položka přeškrtne, zešedne a sjede na konec kategorie. Dalším ťuknutím (nebo „Vrátit“ v liště) se vrátí.
 - **Úklid:** před diktováním se aplikace zeptá, jestli smazat koupené věci z minula (nekoupené zůstanou). Koupené se navíc samy mažou po nastavené době (výchozí 12 h).
