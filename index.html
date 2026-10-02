@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Nákupní seznam</title>
+  <meta name="theme-color" content="#2f7d4f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Nákup">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Nákup <span id="count" class="count"></span></h1>
+    <div class="top-actions">
+      <button id="btn-share" class="icon-btn" hidden title="Sdílet seznam" aria-label="Sdílet seznam">🔗</button>
+      <button id="btn-settings" class="icon-btn" title="Nastavení" aria-label="Nastavení">⚙️</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <label class="switch">
+      <input type="checkbox" id="hide-bought">
+      <span>Skrýt koupené</span>
+    </label>
+    <button id="btn-new" class="text-btn">🧹 Nový nákup</button>
+  </div>
+
+  <main id="list" class="list" aria-live="polite"></main>
+
+  <div class="bottom-bar">
+    <button id="btn-type" class="round-btn small" title="Napsat ručně" aria-label="Napsat ručně">⌨️</button>
+    <button id="btn-mic" class="round-btn mic" aria-label="Diktovat seznam">🎤</button>
+    <span class="round-btn small placeholder"></span>
+  </div>
+
+  <div id="toast" class="toast" hidden>
+    <span id="toast-text"></span>
+    <button id="toast-undo" class="text-btn">Vrátit</button>
+  </div>
+
+  <!-- Diktování / přidání položek -->
+  <dialog id="dlg-add" class="sheet">
+    <form method="dialog">
+      <h2 id="add-title">Diktuj…</h2>
+      <p class="hint" id="add-hint">Říkej položky a mezi nimi dělej krátkou pauzu nebo řekni „a“.</p>
+      <textarea id="add-text" rows="6" placeholder="Jedna položka na řádek"></textarea>
+      <p id="add-interim" class="interim"></p>
+      <ul id="add-preview" class="preview"></ul>
+      <div class="row">
+        <button type="button" id="add-mic" class="round-btn mic small-mic" aria-label="Nahrávat">🎤</button>
+        <span class="spacer"></span>
+        <button value="cancel" class="text-btn">Zrušit</button>
+        <button type="button" id="add-confirm" class="primary-btn">Přidat</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Nový nákup -->
+  <dialog id="dlg-new" class="sheet">
+    <form method="dialog">
+      <h2>Nový nákup</h2>
+      <p class="hint" id="new-summary"></p>
+      <div class="stack">
+        <button value="bought" class="primary-btn">Smazat koupené, nekoupené nechat</button>
+        <button value="all" class="danger-btn">Smazat úplně všechno</button>
+        <button value="keep" id="new-keep" class="text-btn">Nic nemazat, jen přidat</button>
+        <button value="cancel" class="text-btn">Zrušit</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Úprava položky -->
+  <dialog id="dlg-item" class="sheet">
+    <form method="dialog">
+      <h2>Upravit položku</h2>
+      <input id="item-name" type="text" autocomplete="off">
+      <p class="hint">Kategorie (aplikace si zapamatuje):</p>
+      <div id="item-cats" class="chips"></div>
+      <div class="row">
+        <button type="button" id="item-delete" class="danger-btn">Smazat</button>
+        <span class="spacer"></span>
+        <button value="cancel" class="text-btn">Zrušit</button>
+        <button type="button" id="item-save" class="primary-btn">Uložit</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Nastavení -->
+  <dialog id="dlg-settings" class="sheet tall">
+    <form method="dialog">
+      <h2>Nastavení</h2>
+
+      <label class="field">
+        <span>Koupené položky automaticky smazat</span>
+        <select id="set-autodelete">
+          <option value="0">nikdy</option>
+          <option value="3">po 3 hodinách</option>
+          <option value="12">po 12 hodinách</option>
+          <option value="24">po 1 dni</option>
+          <option value="72">po 3 dnech</option>
+        </select>
+      </label>
+
+      <h3>Kategorie</h3>
+      <p class="hint">Pořadí = pořadí v seznamu (třeba podle uličky v obchodě). Klíčová slova odděluj čárkou.</p>
+      <div id="set-cats"></div>
+      <button type="button" id="set-add-cat" class="text-btn">+ Přidat kategorii</button>
+
+      <h3>Seznam</h3>
+      <p class="hint" id="set-sync"></p>
+      <div class="row">
+        <button type="button" id="set-reset-learned" class="text-btn">Zapomenout naučené</button>
+      </div>
+
+      <div class="row">
+        <span class="spacer"></span>
+        <button value="cancel" class="text-btn">Zavřít</button>
+        <button type="button" id="set-save" class="primary-btn">Uložit</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

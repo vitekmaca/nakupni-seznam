@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud_firestore {
+  match /databases/{database}/documents {
+    // Seznam zná jen ten, kdo má jeho náhodné ID (odkaz). Výpis všech seznamů je zakázaný.
+    match /lists/{listId} {
+      allow get, create, update: if listId.size() >= 16;
+      match /items/{itemId} {
+        allow read, write: if listId.size() >= 16;
+      }
+    }
+  }
+}
