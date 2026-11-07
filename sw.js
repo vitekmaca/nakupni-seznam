@@ -1,6 +1,6 @@
 // Service worker: aplikace musí jít otevřít i bez signálu v obchodě.
 // Vlastní soubory: síť má přednost, cache je záloha. Firebase: pevná verze, stačí cache.
-const CACHE = "nakupni-seznam-v3";
+const CACHE = "nakupni-seznam-v4";
 const FIREBASE = "https://www.gstatic.com/firebasejs/10.14.1/"; // stejná verze jako v store.js
 const PRECACHE = [
   "./", "index.html", "style.css", "app.js", "parse.js", "store.js", "categories.js",
@@ -34,7 +34,8 @@ self.addEventListener("fetch", (e) => {
   }
   if (new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request)
+    // no-cache: vždy ověřit na serveru, jinak by HTTP cache držela starou verzi až 10 minut.
+    fetch(e.request.url, { cache: "no-cache" })
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
