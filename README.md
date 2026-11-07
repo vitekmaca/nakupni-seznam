@@ -11,23 +11,19 @@ Webová aplikace na nákupní seznam z diktování. Ťukneš na 🎤, vyjmenuje�
 - **Koupeno:** ťuknutím se položka přeškrtne, zešedne a sjede na konec kategorie. Dalším ťuknutím (nebo „Vrátit“ v liště) se vrátí.
 - **Úklid:** před diktováním se aplikace zeptá, jestli smazat koupené věci z minula (nekoupené zůstanou). Koupené se navíc samy mažou po nastavené době (výchozí 12 h).
 - **Duplicity:** položka, která už na seznamu je, se nepřidá znovu. Pokud už byla koupená, vrátí se mezi nekoupené.
-- **Offline / PWA:** stránku jde přidat na plochu telefonu.
+- **Offline / PWA:** stránku jde přidat na plochu telefonu a otevře se i bez signálu.
 
-## Sdílení mezi telefony (Firebase)
+## Společný seznam v cloudu (Firebase)
 
-Bez nastavení se seznam ukládá jen v prohlížeči. Pro sdílení:
+Bez konfigurace se seznam ukládá jen v prohlížeči. S konfigurací mají všechna zařízení automaticky stejný seznam, změny se projeví hned a bez signálu se dožene synchronizace později. Nic se nesdílí ručně.
 
 1. Na <https://console.firebase.google.com> vytvoř projekt (Analytics není potřeba).
-2. **Build → Firestore Database → Create database** (production mode, region `eur3` nebo `europe-west`).
+2. **Build → Firestore Database → Create database** (production mode, region v Evropě, např. `eur3`).
 3. V záložce **Rules** nahraď pravidla obsahem souboru `firestore.rules` a dej **Publish**.
-4. **Project settings → Your apps → Web (`</>`)**, zaregistruj aplikaci a zkopíruj objekt `firebaseConfig`.
-5. Vlož ho do `firebase-config.js` místo `null`:
-   ```js
-   export const FIREBASE_CONFIG = { apiKey: "…", authDomain: "…", projectId: "…", … };
-   ```
-6. Commitni a pushni. V aplikaci se objeví tlačítko 🔗. Odkaz z něj pošli ostatním a otevře se jim stejný seznam.
+4. **Project settings → Your apps → Web (`</>`)**, zaregistruj aplikaci a objekt `firebaseConfig` vlož do `firebase-config.js` místo `null`.
+5. Commitni a pushni.
 
-Konfigurace Firebase není tajná. Seznam chrání jeho náhodné ID v odkazu: kdo odkaz nemá, seznam nenajde.
+Přihlašování není potřeba. Přístup hlídá dlouhé ID seznamu v `firebase-config.js`, které je ale ve veřejném repozitáři: kdo si kód přečte, může seznam zobrazit nebo upravit.
 
 ## Lokální spuštění
 

@@ -2,6 +2,7 @@ import { DEFAULT_CATEGORIES, FALLBACK_CATEGORY, withDefaultKeywords } from "./ca
 import { STAPLES } from "./staples.js";
 import { splitItems, splitDictation, itemKey, categorize, normalize } from "./parse.js";
 import { createStore } from "./store.js";
+import { FIREBASE_CONFIG, HOUSEHOLD_LIST_ID } from "./firebase-config.js";
 
 const $ = (sel) => document.querySelector(sel);
 const HOUR = 3600 * 1000;
@@ -40,13 +41,13 @@ function escapeHtml(s) {
 }
 
 // Parametry v adrese:
-//   #l=<id>          sdílený seznam (kdo má odkaz, vidí a upravuje stejný seznam)
 //   #pridat=a,b,c    přidá položky (např. odkaz poslaný z jiné aplikace)
 const hashParams = new URLSearchParams(location.hash.slice(1));
 if (location.hash) history.replaceState(null, "", location.pathname + location.search);
 
 function resolveListId() {
-  const id = hashParams.get("l") || pref("listId") || randomListId();
+  if (FIREBASE_CONFIG) return HOUSEHOLD_LIST_ID;
+  const id = pref("listId") || randomListId();
   pref("listId", id);
   return id;
 }
@@ -56,6 +57,37 @@ function resolveListId() {
 const listId = resolveListId();
 const store = await createStore(listId, DEFAULT_META);
 let hideBought = pref("hideBought") ?? false;
+
+// Jednou po přechodu do cloudu přenese seznam a historii z tohoto zařízení.
+function migrateLocalData() {
+  if (store.mode !== "firebase" || pref("migrated")) return;
+  pref("migrated", true);
+  let saved = null;
+  try {
+    saved = JSON.parse(localStorage.getItem("nakupni-seznam:" + pref("listId")));
+  } catch {}
+  if (!saved) return;
+  const keys = new Set(Object.values(store.items).map((i) => i.key));
+  const items = Object.values(saved.items || {}).filter((i) => !keys.has(i.key));
+  if (items.length) store.putItems(items);
+  const meta = saved.meta || {};
+  const history = { ...(store.meta.history || {}) };
+  for (const [key, h] of Object.entries(meta.history || {})) {
+    const cur = history[key];
+    history[key] = !cur ? h : {
+      ...cur,
+      count: (cur.count || 0) + (h.count || 0),
+      lastAdded: Math.max(cur.lastAdded || 0, h.lastAdded || 0),
+      lastBought: Math.max(cur.lastBought || 0, h.lastBought || 0),
+    };
+  }
+  store.patchMeta({
+    history,
+    learned: { ...(meta.learned || {}), ...(store.meta.learned || {}) },
+    phrases: [...new Set([...(store.meta.phrases || []), ...(meta.phrases || [])])],
+  });
+}
+migrateLocalData();
 
 const categories = () => store.meta.categories?.length ? store.meta.categories : DEFAULT_CATEGORIES;
 // Kategorie s kompletním slovníkem pro třídění (uložené + výchozí + inspirační seznam).
@@ -527,8 +559,8 @@ $("#btn-settings").addEventListener("click", () => {
   $("#set-autodelete").value = String(store.meta.autoDeleteHours ?? 12);
   $("#set-sync").textContent =
     store.mode === "firebase"
-      ? `Seznam se synchronizuje mezi zařízeními. Pro sdílení použij 🔗 nahoře. (ID: ${listId})`
-      : "Seznam je uložený jen v tomto prohlížeči (sdílení zatím není nastavené).";
+      ? "Seznam je v cloudu a je společný pro všechna zařízení."
+      : "Seznam je uložený jen v tomto prohlížeči.";
   $("#dlg-settings").showModal();
 });
 
@@ -551,20 +583,8 @@ $("#set-reset-learned").addEventListener("click", () => {
   toast("Naučená zařazení smazána");
 });
 
-// ---------- sdílení ----------
-
-if (store.mode === "firebase") {
-  $("#btn-share").hidden = false;
-  $("#btn-share").addEventListener("click", async () => {
-    const url = `${location.origin}${location.pathname}#l=${listId}`;
-    try {
-      if (navigator.share) await navigator.share({ title: "Nákupní seznam", url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast("Odkaz zkopírován – pošli ho, s kým chceš seznam sdílet");
-      }
-    } catch {}
-  });
+if (FIREBASE_CONFIG && store.mode !== "firebase") {
+  toast("Cloud se nepodařilo načíst, změny zůstanou jen v tomto telefonu");
 }
 
 // ---------- PWA ----------

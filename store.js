@@ -8,6 +8,7 @@
 
 import { FIREBASE_CONFIG } from "./firebase-config.js";
 
+// Stejná verze musí být i v sw.js (kvůli offline).
 const FIREBASE_VERSION = "10.14.1";
 
 class LocalStore {
@@ -75,21 +76,23 @@ class FirebaseStore {
     this.itemsRef = fs.collection(this.listRef, "items");
 
     let firstMeta = true;
+    let metaCreated = false;
     await new Promise((resolve) => {
       let pending = 2;
       const done = () => --pending === 0 && resolve();
       fs.onSnapshot(this.listRef, (snap) => {
         if (snap.exists()) {
           this.meta = { ...this.defaultMeta, ...snap.data() };
-        } else if (firstMeta && !snap.metadata.fromCache) {
-          fs.setDoc(this.listRef, this.defaultMeta);
+        } else if (!metaCreated && !snap.metadata.fromCache) {
+          metaCreated = true;
+          this._write(fs.setDoc(this.listRef, this.defaultMeta));
         }
         if (firstMeta) {
           firstMeta = false;
           done();
         }
         this._emit();
-      });
+      }, (err) => this._fail(err));
       let firstItems = true;
       fs.onSnapshot(this.itemsRef, (snap) => {
         const items = {};
@@ -100,8 +103,17 @@ class FirebaseStore {
           done();
         }
         this._emit();
-      });
+      }, (err) => this._fail(err));
     });
+  }
+
+  _fail(err) {
+    console.error("Firestore:", err);
+  }
+  // Na potvrzení serveru se nečeká: bez signálu by nepřišlo a aplikace by stála.
+  // Změna se ukáže hned a odešle se, jakmile bude spojení.
+  _write(promise) {
+    promise.catch((err) => this._fail(err));
   }
 
   onChange(fn) {
@@ -113,19 +125,19 @@ class FirebaseStore {
   async putItems(items) {
     const batch = this.fs.writeBatch(this.db);
     for (const it of items) batch.set(this.fs.doc(this.itemsRef, it.id), it);
-    await batch.commit();
+    this._write(batch.commit());
   }
   async patchItem(id, patch) {
-    await this.fs.updateDoc(this.fs.doc(this.itemsRef, id), patch);
+    this._write(this.fs.updateDoc(this.fs.doc(this.itemsRef, id), patch));
   }
   async deleteItems(ids) {
     const batch = this.fs.writeBatch(this.db);
     for (const id of ids) batch.delete(this.fs.doc(this.itemsRef, id));
-    await batch.commit();
+    this._write(batch.commit());
   }
   async patchMeta(patch) {
     this.meta = { ...this.meta, ...patch };
-    await this.fs.setDoc(this.listRef, patch, { merge: true });
+    this._write(this.fs.setDoc(this.listRef, patch, { merge: true }));
   }
 }
 

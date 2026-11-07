@@ -1,7 +1,7 @@
 rules_version = '2';
-service cloud_firestore {
+service cloud.firestore {
   match /databases/{database}/documents {
-    // Seznam zná jen ten, kdo má jeho náhodné ID (odkaz). Výpis všech seznamů je zakázaný.
+    // Přístup jen k seznamu se známým dlouhým ID (je v firebase-config.js). Výpis všech seznamů je zakázaný.
     match /lists/{listId} {
       allow get, create, update: if listId.size() >= 16;
       match /items/{itemId} {
