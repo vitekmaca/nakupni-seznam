@@ -156,4 +156,26 @@ export async function createStore(listId, defaultMeta) {
   return store;
 }
 
-export const syncAvailable = () => Boolean(FIREBASE_CONFIG);
+// Odvodí z názvu domácnosti a kódu ID seznamu. Kód ani název se nikam neposílají.
+export async function householdListId(name, code) {
+  const text = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", text.encode(`${name}:${code}`), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt: text.encode("nakupni-seznam"), iterations: 150000 },
+    key,
+    256
+  );
+  return Array.from(new Uint8Array(bits), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// true = domácnost existuje, false = špatný název nebo kód. Bez spojení vyhodí chybu.
+export async function householdExists(listId) {
+  const { projectId, apiKey } = FIREBASE_CONFIG;
+  const url =
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents` +
+    `/lists/${listId}?key=${apiKey}&mask.fieldPaths=autoDeleteHours`;
+  const res = await fetch(url);
+  if (res.ok) return true;
+  if (res.status === 404) return false;
+  throw new Error("Firestore " + res.status);
+}

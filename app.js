@@ -1,8 +1,8 @@
 import { DEFAULT_CATEGORIES, FALLBACK_CATEGORY, withDefaultKeywords } from "./categories.js";
 import { STAPLES } from "./staples.js";
 import { splitItems, splitDictation, itemKey, categorize, normalize } from "./parse.js";
-import { createStore } from "./store.js";
-import { FIREBASE_CONFIG, HOUSEHOLD_LIST_ID } from "./firebase-config.js";
+import { createStore, householdListId, householdExists } from "./store.js";
+import { FIREBASE_CONFIG } from "./firebase-config.js";
 
 const $ = (sel) => document.querySelector(sel);
 const HOUR = 3600 * 1000;
@@ -45,8 +45,37 @@ function escapeHtml(s) {
 const hashParams = new URLSearchParams(location.hash.slice(1));
 if (location.hash) history.replaceState(null, "", location.pathname + location.search);
 
-function resolveListId() {
-  if (FIREBASE_CONFIG) return HOUSEHOLD_LIST_ID;
+// Přihlášení do domácnosti: zadá se jednou na zařízení, pak si ho aplikace pamatuje.
+function loginToHousehold() {
+  $("#login").hidden = false;
+  return new Promise((resolve) => {
+    $("#login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = $("#login-name").value.trim();
+      const code = $("#login-code").value.trim();
+      const error = $("#login-error");
+      error.textContent = "";
+      if (!name || !code) return;
+      $("#login-submit").disabled = true;
+      try {
+        const id = await householdListId(normalize(name), code);
+        if (await householdExists(id)) {
+          pref("householdId", id);
+          pref("householdName", name);
+          $("#login").hidden = true;
+          return resolve(id);
+        }
+        error.textContent = "Špatný název domácnosti nebo kód.";
+      } catch {
+        error.textContent = "Nepodařilo se ověřit, zkontroluj připojení k internetu.";
+      }
+      $("#login-submit").disabled = false;
+    });
+  });
+}
+
+async function resolveListId() {
+  if (FIREBASE_CONFIG) return pref("householdId") || loginToHousehold();
   const id = pref("listId") || randomListId();
   pref("listId", id);
   return id;
@@ -54,7 +83,7 @@ function resolveListId() {
 
 // ---------- stav ----------
 
-const listId = resolveListId();
+const listId = await resolveListId();
 const store = await createStore(listId, DEFAULT_META);
 let hideBought = pref("hideBought") ?? false;
 
@@ -559,8 +588,9 @@ $("#btn-settings").addEventListener("click", () => {
   $("#set-autodelete").value = String(store.meta.autoDeleteHours ?? 12);
   $("#set-sync").textContent =
     store.mode === "firebase"
-      ? "Seznam je v cloudu a je společný pro všechna zařízení."
+      ? `Domácnost: ${pref("householdName")}. Seznam je v cloudu a je společný pro všechna vaše zařízení.`
       : "Seznam je uložený jen v tomto prohlížeči.";
+  $("#set-logout").hidden = store.mode !== "firebase";
   $("#dlg-settings").showModal();
 });
 
@@ -571,6 +601,13 @@ $("#set-save").addEventListener("click", () => {
   if (cats.length) store.patchMeta({ categories: cats, autoDeleteHours: Number($("#set-autodelete").value) });
   $("#dlg-settings").close();
   autoCleanup();
+});
+
+$("#set-logout").addEventListener("click", () => {
+  if (!confirm("Odhlásit tohle zařízení z domácnosti? Seznam zůstane v cloudu.")) return;
+  pref("householdId", null);
+  pref("householdName", null);
+  location.reload();
 });
 
 $("#set-reset-learned").addEventListener("click", () => {

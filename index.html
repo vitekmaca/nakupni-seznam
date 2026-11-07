@@ -13,6 +13,18 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div id="login" class="login" hidden>
+    <form id="login-form" class="login-box">
+      <span class="login-icon">🛒</span>
+      <h1>Nákupní seznam</h1>
+      <p class="hint">Přihlas se do své domácnosti. Stačí jednou na každém zařízení.</p>
+      <input id="login-name" type="text" placeholder="Název domácnosti" autocomplete="off" autocapitalize="words" required>
+      <input id="login-code" type="password" inputmode="numeric" placeholder="Kód" autocomplete="off" required>
+      <p id="login-error" class="login-error" role="alert"></p>
+      <button id="login-submit" class="primary-btn">Vstoupit</button>
+    </form>
+  </div>
+
   <header class="top">
     <h1>Nákup <span id="count" class="count"></span></h1>
     <div class="top-actions">
@@ -130,6 +142,7 @@
       <p class="hint" id="set-sync"></p>
       <div class="row">
         <button type="button" id="set-reset-learned" class="text-btn">Zapomenout naučené</button>
+        <button type="button" id="set-logout" class="text-btn" hidden>Odhlásit z domácnosti</button>
       </div>
 
       <div class="row">

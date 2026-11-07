@@ -1,11 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Přístup jen k seznamu se známým dlouhým ID (je v firebase-config.js). Výpis všech seznamů je zakázaný.
+    // Domácnosti zakládá jen správce v konzoli. ID seznamu se počítá z názvu a kódu domácnosti.
     match /lists/{listId} {
-      allow get, create, update: if listId.size() >= 16;
+      allow get, update: if listId.size() == 64;
       match /items/{itemId} {
-        allow read, write: if listId.size() >= 16;
+        allow read, write: if listId.size() == 64
+          && exists(/databases/$(database)/documents/lists/$(listId));
       }
     }
   }

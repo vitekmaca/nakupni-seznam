@@ -15,15 +15,11 @@ Webová aplikace na nákupní seznam z diktování. Ťukneš na 🎤, vyjmenuje�
 
 ## Společný seznam v cloudu (Firebase)
 
-Bez konfigurace se seznam ukládá jen v prohlížeči. S konfigurací mají všechna zařízení automaticky stejný seznam, změny se projeví hned a bez signálu se dožene synchronizace později. Nic se nesdílí ručně.
+Aplikace běží na Firebase Firestore (projekt v `firebase-config.js`, pravidla v `firestore.rules`). Na každém zařízení se člověk jednou přihlásí názvem domácnosti a kódem. Všechna zařízení v domácnosti pak mají stejný seznam, změny se projeví hned a bez signálu se synchronizace dožene později.
 
-1. Na <https://console.firebase.google.com> vytvoř projekt (Analytics není potřeba).
-2. **Build → Firestore Database → Create database** (production mode, region v Evropě, např. `eur3`).
-3. V záložce **Rules** nahraď pravidla obsahem souboru `firestore.rules` a dej **Publish**.
-4. **Project settings → Your apps → Web (`</>`)**, zaregistruj aplikaci a objekt `firebaseConfig` vlož do `firebase-config.js` místo `null`.
-5. Commitni a pushni.
+Název a kód nejsou v repozitáři a neposílají se na server. Aplikace z nich spočítá ID seznamu (PBKDF2). Krátký kód je ochrana proti náhodnému přístupu, ne proti cílenému zkoušení všech kombinací.
 
-Přihlašování není potřeba. Přístup hlídá dlouhé ID seznamu v `firebase-config.js`, které je ale ve veřejném repozitáři: kdo si kód přečte, může seznam zobrazit nebo upravit.
+Novou domácnost založí jen správce: spočítá ID a v konzoli vytvoří dokument `lists/<ID>`.
 
 ## Lokální spuštění
 

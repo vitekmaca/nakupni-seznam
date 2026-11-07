@@ -1,6 +1,6 @@
 // Service worker: aplikace musí jít otevřít i bez signálu v obchodě.
 // Vlastní soubory: síť má přednost, cache je záloha. Firebase: pevná verze, stačí cache.
-const CACHE = "nakupni-seznam-v2";
+const CACHE = "nakupni-seznam-v3";
 const FIREBASE = "https://www.gstatic.com/firebasejs/10.14.1/"; // stejná verze jako v store.js
 const PRECACHE = [
   "./", "index.html", "style.css", "app.js", "parse.js", "store.js", "categories.js",
